@@ -1,22 +1,32 @@
 import { Start } from './scenes/Start.js';
-
+import Mapa from './scenes/Mapa.js';
+import { Instrucoes } from './scenes/Instrucoes.js';
 const config = {
     type: Phaser.AUTO,
-    title: 'Overlord Rising',
-    description: '',
     parent: 'game-container',
-    width: 1280,
-    height: 720,
+    width: 960,
+    height: 540,
     backgroundColor: '#000000',
-    pixelArt: false,
-    scene: [
-        Start
-    ],
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+    pixelArt: true,            // <<< ADICIONAR ISTO
+    physics: {
+        default: 'arcade',
+        arcade: {
+        gravity: { 
+            y: 0 
+        },
+         debug: true
+        }
+        
     },
-}
+    scene: [ 
+        Start,
+         Mapa,
+    Instrucoes 
+    ],
+    scale: { 
+    mode: Phaser.Scale.NONE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+ }
+};
 
-new Phaser.Game(config);
-            
+window.game = new Phaser.Game(config);
