@@ -10,6 +10,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.body.setOffset(3, 4);
         }
         this.setDepth(50);
+
+        // health   
+        this.invulnerable = false;
     }
 
     update(cursors) {
@@ -37,6 +40,39 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         } else {
             this.anims.stop();
             this.setFrame(0);
+        }
+    }
+
+
+    takeDamage(amount = 1) {
+        if (this.invulnerable) return;
+        this.health = Math.max(0, this.health - amount);
+
+     
+        if (this.scene && typeof this.scene.updateTopText === 'function') {
+            this.scene.updateTopText();
+        }
+
+        this.invulnerable = true;
+        this.setTint(0xff4444);
+        // breve efeito e invulnerabilidade
+        this.scene.time.delayedCall(500, () => {
+            this.clearTint();
+            this.invulnerable = false;
+        });
+
+        if (this.health <= 0) {
+            // desacivar jogador 
+            if (this.body) this.body.enable = false;
+            this.setVisible(false);
+
+            // obtém número de cães resgatados da Scene 
+            const rescued = (this.scene && typeof this.scene.rescuedCount !== 'undefined') ? this.scene.rescuedCount : 0;
+
+           
+            if (this.scene && this.scene.scene) {
+                this.scene.scene.start('GameOver', { rescued });
+            }
         }
     }
 }

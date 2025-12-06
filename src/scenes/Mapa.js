@@ -1,5 +1,6 @@
 import Player from '../scenes/Player.js';
 import Animal from '../scenes/Animal.js';
+import Armadilha from '../scenes/Armadilha.js';
 
 export default class Mapa extends Phaser.Scene {
 
@@ -15,13 +16,15 @@ export default class Mapa extends Phaser.Scene {
         this.load.tilemapTiledJSON('map', 'assets/map/map.json');
         this.load.spritesheet('player', 'assets/RPG_assets.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
+       
+        this.load.spritesheet('trap', 'assets/Bear_Trap.png', { frameWidth: 16, frameHeight: 16 });
     }
 
     create() {
         const map = this.make.tilemap({ key: 'map' });
 
         const tsName = map.tilesets && map.tilesets[0] ? map.tilesets[0].name : 'tiles';
-        // se o tileset no JSON tiver um nome diferente, usa 'tiles' como fallback
+        // verificar se o tileset existe, senão usar 'tiles' por defeito
         const keyToUse = this.textures.exists(tsName) ? tsName : 'tiles';
         const tiles = map.addTilesetImage(tsName, keyToUse, map.tileWidth, map.tileHeight, 0, 0);
 
@@ -47,8 +50,80 @@ export default class Mapa extends Phaser.Scene {
             }
         }
 
+        // guardar spawn para respawn futuro
+        this.spawn = spawn;
+        // contador de mortes
+        this.deathCount = 0;
+
         // criar jogador
         this.player = new Player(this, spawn.x, spawn.y);
+
+        // inicializar contadores mínimos
+        this.rescuedCount = 0;
+        this.DOG_TARGET = 6;
+
+        // HUD overlay 
+        (function createHUDOverlay(scene) {
+            const body = document.body;
+            let el = document.getElementById('hud-overlay');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'hud-overlay';
+                Object.assign(el.style, {
+                    position: 'absolute',
+                    padding: '6px 10px',
+                    fontFamily: 'monospace',
+                    fontSize: '18px',
+                    color: '#ffffff',
+                    background: 'rgba(0,0,0,0.35)',
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap'
+                });
+                body.appendChild(el);
+            }
+            scene._hudOverlayEl = el;
+
+            // calcula e aplica posição baseada no canvas
+            const updateOverlayPosition = () => {
+                const canvas = body.querySelector('#game-container canvas') || body.querySelector('canvas');
+                if (!canvas) return;
+                const r = canvas.getBoundingClientRect();
+                // posição 8px dentro do canvas
+                el.style.left = (window.scrollX + r.left + 8) + 'px';
+                el.style.top = (window.scrollY + r.top + 8) + 'px';
+            };
+
+            // chamar imediatamente e registar resize/scroll
+            updateOverlayPosition();
+            scene._hudUpdatePos = updateOverlayPosition;
+            window.addEventListener('resize', updateOverlayPosition);
+            window.addEventListener('scroll', updateOverlayPosition);
+
+            // remover ao fechar a scene
+            scene.events.on('shutdown', () => {
+                window.removeEventListener('resize', updateOverlayPosition);
+                window.removeEventListener('scroll', updateOverlayPosition);
+                if (scene._hudOverlayEl && scene._hudOverlayEl.parentNode) {
+                    scene._hudOverlayEl.parentNode.removeChild(scene._hudOverlayEl);
+                    scene._hudOverlayEl = null;
+                }
+            });
+        })(this);
+
+        // função para atualizar o texto superior 
+        this.updateTopText = () => {
+            const vidas = (this.player && typeof this.player.health !== 'undefined') ? this.player.health : 0;
+            const resgat = (typeof this.rescuedCount !== 'undefined') ? this.rescuedCount : 0;
+            if (this._hudOverlayEl) {
+                this._hudOverlayEl.textContent = `Vidas: ${vidas}   Resgatados: ${resgat}/${this.DOG_TARGET}`;
+            }
+        };
+
+        // atualizar inicialmente
+        this.updateTopText();
+        // assegurar posição correcta 
+        if (typeof this._hudUpdatePos === 'function') this._hudUpdatePos();
 
         // adicionar colisão entre jogador e layer de obstáculos
         if (obstaculos) {
@@ -70,7 +145,7 @@ export default class Mapa extends Phaser.Scene {
         // arredondar pixels para evitar artefactos com pixel-art
         this.cameras.main.roundPixels = true;
 
-        // deadzone opcional — mantém jogador dentro de uma área antes da câmara começar a mover
+        // mantém jogador dentro de uma área antes da câmara começar a mover
         const dzWidth = Math.round(this.scale.width / 6);
         const dzHeight = Math.round(this.scale.height / 6);
         this.cameras.main.setDeadzone(dzWidth, dzHeight);
@@ -87,115 +162,137 @@ export default class Mapa extends Phaser.Scene {
         this.anims.create({ key: 'up', frames: this.anims.generateFrameNumbers('player', { frames:[2,8,2,14] }), frameRate: 10, repeat: -1 });
         this.anims.create({ key: 'down', frames: this.anims.generateFrameNumbers('player', { frames:[0,6,0,12] }), frameRate: 10, repeat: -1 });
 
-        // completamente aleatório de cães
-        this.DOG_TARGET = 6;                     
+        // animação da armadilha 
+        if (!this.anims.exists('trap_anim')) {
+            this.anims.create({
+                key: 'trap_anim',
+                frames: this.anims.generateFrameNumbers('trap', { start: 0, end: 2 }),
+                frameRate: 8,
+                repeat: 0
+            });
+        }
+
+      
+       
         this.dogsGroup = this.physics.add.group();
-        const HITBOX_W = 10;
-        const HITBOX_H = 12;
-        const MAX_ATTEMPTS = 300;
-        const minDistFromPlayer = 64; 
+        const minDistFromPlayer = 64;
         const minDistBetweenDogs = 96;
+        const MAX_TRIES = 120;
+
+        // utilitário simples para encontrar posição válida
+        const findValidPos = (avoidList = [], minDist = minDistFromPlayer) => {
+            for (let i = 0; i < MAX_TRIES; i++) {
+                const tx = Phaser.Math.Between(0, map.width - 1);
+                const ty = Phaser.Math.Between(0, map.height - 1);
+                if (obstaculos) {
+                    const tile = obstaculos.getTileAt(tx, ty);
+                    if (tile && tile.index !== -1) continue;
+                }
+                const wx = map.tileToWorldX(tx) + map.tileWidth / 2;
+                const wy = map.tileToWorldY(ty) + map.tileHeight;
+                if (Phaser.Math.Distance.Between(wx, wy, spawn.x, spawn.y) < minDist) continue;
+                let tooClose = false;
+                for (const p of avoidList) {
+                    if (Phaser.Math.Distance.Between(wx, wy, p.x, p.y) < minDistBetweenDogs) {
+                        tooClose = true; break;
+                    }
+                }
+                if (tooClose) continue;
+                return { x: wx, y: wy };
+            }
+            return null;
+        };
+
+        // criar cães 
 
         const dogsTex = this.textures.get('dogs');
-        if (!dogsTex) {
-            
-        } else {
-            const src = dogsTex.getSourceImage();
-            const cols = Math.max(1, Math.floor(src.width / 16));
-            const rows = Math.max(1, Math.floor(src.height / 16));
-            const totalFrames = cols * rows;
+        const totalFrames = dogsTex ? Math.max(1, Math.floor(dogsTex.getSourceImage().width / 16) * Math.floor(dogsTex.getSourceImage().height / 16)) : 1;
+        const spawnedPositions = [];
 
-            const spawnedPositions = [];
-            let spawned = 0;
-            let globalAttempts = 0;
-            const maxGlobalAttempts = this.DOG_TARGET * MAX_ATTEMPTS;
-
-            while (spawned < this.DOG_TARGET && globalAttempts < maxGlobalAttempts) {
-                globalAttempts++;
-                let attempt = 0;
-                let valid = false;
-                let worldX = 0;
-                let worldY = 0;
-                let tileX = 0;
-                let tileY = 0;
-
-                while (!valid && attempt < MAX_ATTEMPTS) {
-                    attempt++;
-                    tileX = Phaser.Math.Between(0, map.width - 1);
-                    tileY = Phaser.Math.Between(0, map.height - 1);
-
-                    worldX = map.tileToWorldX(tileX) + map.tileWidth / 2;
-                    worldY = map.tileToWorldY(tileY) + map.tileHeight;
-
-                    // não spawnar muito perto do spawn
-                    if (Phaser.Math.Distance.Between(worldX, worldY, spawn.x, spawn.y) < minDistFromPlayer) continue;
-
-                    // evita tiles de obstáculos
-                    let blocked = false;
-                    if (obstaculos) {
-                        const t = obstaculos.getTileAt(tileX, tileY);
-                        if (t && t.index !== -1) blocked = true;
-                    }
-                    if (blocked) continue;
-
-                    // evita posição perto de já spawnados
-                    let tooClose = false;
-                    for (let p of spawnedPositions) {
-                        if (Phaser.Math.Distance.Between(worldX, worldY, p.x, p.y) < minDistBetweenDogs) {
-                            tooClose = true;
-                            break;
-                        }
-                    }
-                    if (tooClose) continue;
-
-                    valid = true;
+        // criar o número alvo de cães
+        for (let i = 0; i < this.DOG_TARGET; i++) {
+            const pos = findValidPos(spawnedPositions);
+            if (!pos) break; // não conseguiu encontrar mais posições válidas
+            const frameIndex = Phaser.Math.Between(0, totalFrames - 1);
+            const dog = new Animal(this, pos.x, pos.y, frameIndex);
+            this.dogsGroup.add(dog);
+            spawnedPositions.push(pos);
+            // adicionar overlap entre jogador e cão
+            this.physics.add.overlap(this.player, dog, () => {
+                if (!dog._rescued) {
+                    dog.rescue();
+                    this.rescueDog(dog);
                 }
+            }, null, this);
+        }
 
-                if (!valid) {
-                    
-                    continue;
-                }
+        // criar armadilhas 
+        this.trapsGroup = this.physics.add.group();
+        const trapsLayer = map.getObjectLayer ? map.getObjectLayer('Traps') : null;
+        const TRAP_TARGET = 12;
 
-                // spawn do cão usando a classe Animal
-                const frameIndex = Phaser.Math.Between(0, Math.max(0, totalFrames - 1));
-                const dog = new Animal(this, worldX, worldY, frameIndex);
-                this.dogsGroup.add(dog);
-                spawnedPositions.push({ x: worldX, y: worldY });
-                spawned++;
-
-                // overlap -> resgate
-                this.physics.add.overlap(this.player, dog, () => {
-                    if (!dog._rescued) {
-                        dog.rescue();
-                        this.rescueDog(dog);
+        
+        if (trapsLayer && trapsLayer.objects && trapsLayer.objects.length) {
+          
+            for (const obj of trapsLayer.objects) {
+                const tx = (obj.x || 0) + ((obj.width) ? obj.width / 2 : map.tileWidth / 2);
+                const ty = (obj.y || 0) + ((obj.height) ? obj.height : map.tileHeight);
+                const trap = new Armadilha(this, tx, ty, 0, 'trap');
+                this.trapsGroup.add(trap);
+                this.physics.add.overlap(this.player, trap, () => {
+                    if (!trap.activated) {
+                        trap.trigger();
                     }
                 }, null, this);
             }
-
-            if (spawned < this.DOG_TARGET) {
-                console.warn(`Spawnou apenas ${spawned}/${this.DOG_TARGET} cães (limite de tentativas atingido).`);
+        } else {
+        
+            for (let i = 0; i < TRAP_TARGET; i++) {
+                const pos = findValidPos([], 48);
+                if (!pos) break;
+                const trap = new Armadilha(this, pos.x, pos.y, 0, 'trap');
+                this.trapsGroup.add(trap);
+                this.physics.add.overlap(this.player, trap, () => {
+                    if (!trap.activated) trap.trigger();
+                }, null, this);
             }
         }
-
-
     }
 
-    // função de resgate simples
+    // função de resgate 
     rescueDog(dog) {
         if (!dog || dog._rescued === false) {
-            // nothing to do
+    
         }
-        // actualiza contador/HUD se tiveres
+        // atualiza contador/HUD
         this.rescuedCount = (this.rescuedCount || 0) + 1;
-        if (this.rescuedText) this.rescuedText.setText('Resgatados: ' + this.rescuedCount + '/' + (this.DOG_TARGET || 6));
+        // atualizar texto superior
+        if (typeof this.updateTopText === 'function') this.updateTopText();
         if (this.rescuedCount >= (this.DOG_TARGET || 6)) {
-            this.time.delayedCall(350, () => this.scene.start('Nivel2'));
+            this.time.delayedCall(350, () => this.scene.start('Caverna'));
         }
+    }
+
+    // chamada quando o jogador morre 
+    handlePlayerDeath() {
+        // cancelar respawn pendente
+        if (this._respawnTimer && typeof this._respawnTimer.remove === 'function') {
+            this._respawnTimer.remove(false);
+            this._respawnTimer = null;
+        }
+
+        // incrementar contador de mortes
+        this.deathCount = (this.deathCount || 0) + 1;
+        console.log(`[Mapa] handlePlayerDeath called — deathCount=${this.deathCount}`);
+
+        
+
+        
     }
 
     update() {
         if (!this.player) return;
-        // chamar update do player (mantém controlo centralizado)
+        // chamar update do player
         if (this.player.update) this.player.update(this.cursors);
     }
 

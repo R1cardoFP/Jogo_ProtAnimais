@@ -4,10 +4,10 @@ import { Instrucoes } from './scenes/Instrucoes.js';
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: 960,
-    height: 540,
+    width: 1152,            
+    height: 648,            
     backgroundColor: '#000000',
-    pixelArt: true,            // <<< ADICIONAR ISTO
+    pixelArt: true,            
     physics: {
         default: 'arcade',
         arcade: {
@@ -20,8 +20,8 @@ const config = {
     },
     scene: [ 
         Start,
-         Mapa,
-    Instrucoes 
+        Mapa,
+        Instrucoes 
     ],
     scale: { 
     mode: Phaser.Scale.NONE,
