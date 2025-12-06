@@ -32,7 +32,7 @@ export class Instrucoes extends Phaser.Scene {
             '',
             'Regras principais:',
             '  - Colidir com um animal: animal resgatado e pontuação aumenta.',
-            '  - Colidir com obstáculos (árvores/armadilhas): perde vida.',
+            '  - Colidir com obstáculos (armadilhas): perde vida.',
             '  - Existem dois níveis: Floresta (mais fácil) e Caverna (mais difícil).',
             '',
             'Pontuação e vidas:',

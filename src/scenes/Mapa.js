@@ -24,7 +24,7 @@ export default class Mapa extends Phaser.Scene {
         const map = this.make.tilemap({ key: 'map' });
 
         const tsName = map.tilesets && map.tilesets[0] ? map.tilesets[0].name : 'tiles';
-        // verificar se o tileset existe, senão usar 'tiles' por defeito
+        // se o tileset no JSON tiver um nome diferente, usa 'tiles' como fallback
         const keyToUse = this.textures.exists(tsName) ? tsName : 'tiles';
         const tiles = map.addTilesetImage(tsName, keyToUse, map.tileWidth, map.tileHeight, 0, 0);
 
@@ -274,21 +274,42 @@ export default class Mapa extends Phaser.Scene {
     }
 
     // chamada quando o jogador morre 
-    handlePlayerDeath() {
-        // cancelar respawn pendente
-        if (this._respawnTimer && typeof this._respawnTimer.remove === 'function') {
-            this._respawnTimer.remove(false);
-            this._respawnTimer = null;
-        }
+	handlePlayerDeath() {
+		// se já estamos em GameOver, não fazer nada
+		if (this.isGameOver) return;
 
-        // incrementar contador de mortes
-        this.deathCount = (this.deathCount || 0) + 1;
-        console.log(`[Mapa] handlePlayerDeath called — deathCount=${this.deathCount}`);
+		// incrementar contador de mortes
+		this.deathCount = (this.deathCount || 0) + 1;
+		
 
-        
+		// se atingir 3 mortes: marcar gameOver e ir directamente para a cena GameOver
+		if (this.deathCount >= 3) {
+			// impedir qualquer respawn futuro
+			this.isGameOver = true;
 
-        
-    }
+			// cancelar timer de respawn pendente se existir
+			if (this._respawnTimer && typeof this._respawnTimer.remove === 'function') {
+				this._respawnTimer.remove(false);
+				this._respawnTimer = null;
+			}
+
+			// desativar jogador e parar a câmara de o seguir
+			if (this.player) {
+				if (this.player.body) this.player.body.enable = false;
+				this.player.setActive(false);
+				this.player.setVisible(false);
+			}
+			if (this.cameras && this.cameras.main) this.cameras.main.stopFollow();
+
+			// mudar imediatamente para GameOver
+			this.scene.start('GameOver', { deaths: this.deathCount });
+			return;
+		}
+
+		
+
+		
+	}
 
     update() {
         if (!this.player) return;

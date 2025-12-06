@@ -11,7 +11,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
         this.setDepth(50);
 
-        // health   
+        // health
+        this.health = 3;   
         this.invulnerable = false;
     }
 
@@ -62,15 +63,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         });
 
         if (this.health <= 0) {
-            // desacivar jogador 
+            // desativar jogador e ir directamente para GameOver, mostrando cães resgatados
             if (this.body) this.body.enable = false;
             this.setVisible(false);
 
-            // obtém número de cães resgatados da Scene 
+            // obtém número de cães resgatados da Scene
             const rescued = (this.scene && typeof this.scene.rescuedCount !== 'undefined') ? this.scene.rescuedCount : 0;
 
-           
-            if (this.scene && this.scene.scene) {
+            // iniciar GameOver 
+            if (this.scene && this.scene.scene && typeof this.scene.scene.start === 'function') {
                 this.scene.scene.start('GameOver', { rescued });
             }
         }
