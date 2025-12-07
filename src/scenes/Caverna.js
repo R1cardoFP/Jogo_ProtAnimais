@@ -1,5 +1,6 @@
 import Player from './Player.js';
 import Animal from './Animal.js';
+import Armadilha from './Armadilha.js';
 
 export default class Caverna extends Phaser.Scene {
 	constructor() {
@@ -19,6 +20,8 @@ export default class Caverna extends Phaser.Scene {
 		this.load.spritesheet('player', 'assets/RPG_assets.png', { frameWidth: 16, frameHeight: 16 });
 		// carregar spritesheet dos cães
 		this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
+		// carregar spritesheet da armadilha
+		this.load.spritesheet('trap', 'assets/Bear_Trap.png', { frameWidth: 16, frameHeight: 16 });
 	}
 
 	create(data) {
@@ -172,6 +175,50 @@ export default class Caverna extends Phaser.Scene {
 					if (typeof this.updateTopText === 'function') this.updateTopText();
 				}
 			}, null, this);
+		}
+
+		// adicionar armadilhas cerca de 20
+		if (!this.anims.exists('trap_anim')) {
+			this.anims.create({
+				key: 'trap_anim',
+				frames: this.anims.generateFrameNumbers('trap', { start: 0, end: 2 }),
+				frameRate: 8,
+				repeat: 0
+			});
+		}
+		
+		this.trapsGroup = this.physics.add.group();
+		const TRAP_COUNT = 20;
+		const trapsLayer = map.getObjectLayer ? map.getObjectLayer('Traps') : null;
+
+		if (trapsLayer && trapsLayer.objects && trapsLayer.objects.length) {
+			for (const obj of trapsLayer.objects) {
+				const tx = (obj.x || 0) + ((obj.width) ? obj.width / 2 : map.tileWidth / 2);
+				const ty = (obj.y || 0) + ((obj.height) ? obj.height : map.tileHeight);
+				const trap = new Armadilha(this, tx, ty, 0, 'trap');
+				this.trapsGroup.add(trap);
+				this.physics.add.overlap(this.player, trap, () => { if (!trap.activated) trap.trigger(); }, null, this);
+			}
+		} else {
+			// gerar posições aleatórias
+			for (let i = 0; i < TRAP_COUNT; i++) {
+				let p = null;
+				for (let t = 0; t < 200 && !p; t++) {
+					const tx = Phaser.Math.Between(0, (map.width || 1) - 1);
+					const ty = Phaser.Math.Between(0, (map.height || 1) - 1);
+					if (obst && obst.getTileAt(tx, ty) && obst.getTileAt(tx, ty).index !== -1) continue;
+					const wx = map.tileToWorldX(tx) + map.tileWidth / 2;
+					const wy = map.tileToWorldY(ty) + map.tileHeight;
+					if (Phaser.Math.Distance.Between(wx, wy, spawn.x, spawn.y) < 32) continue;
+					const tooClose = this.trapsGroup.getChildren().some(d => Phaser.Math.Distance.Between(d.x, d.y, wx, wy) < 48);
+					if (tooClose) continue;
+					p = { x: wx, y: wy };
+				}
+				if (!p) continue;
+				const trap = new Armadilha(this, p.x, p.y, 0, 'trap');
+				this.trapsGroup.add(trap);
+				this.physics.add.overlap(this.player, trap, () => { if (!trap.activated) trap.trigger(); }, null, this);
+			}
 		}
 
 		// criar controlos 

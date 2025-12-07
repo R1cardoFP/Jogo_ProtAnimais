@@ -39,7 +39,7 @@ export default class Armadilha extends Phaser.Physics.Arcade.Sprite {
         if (this.scene && this.scene.anims && this.scene.anims.exists('trap_anim')) {
             this.play('trap_anim');
             // aguardar fim da animação e depois aplicar dano e destruir
-            this.once('animationcomplete', (anim/*, frame*/) => {
+            this.once('animationcomplete', (anim) => {
                 if (anim && anim.key === 'trap_anim') {
                     if (this.scene && this.scene.player && typeof this.scene.player.takeDamage === 'function') {
                         this.scene.player.takeDamage(1);
