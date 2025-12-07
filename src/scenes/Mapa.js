@@ -24,7 +24,7 @@ export default class Mapa extends Phaser.Scene {
         const map = this.make.tilemap({ key: 'map' });
 
         const tsName = map.tilesets && map.tilesets[0] ? map.tilesets[0].name : 'tiles';
-        // se o tileset no JSON tiver um nome diferente, usa 'tiles' como fallback
+        // verificar se o tileset está carregado, senão usar 'tiles' 
         const keyToUse = this.textures.exists(tsName) ? tsName : 'tiles';
         const tiles = map.addTilesetImage(tsName, keyToUse, map.tileWidth, map.tileHeight, 0, 0);
 

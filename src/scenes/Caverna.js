@@ -1,4 +1,5 @@
 import Player from './Player.js';
+import Animal from './Animal.js';
 
 export default class Caverna extends Phaser.Scene {
 	constructor() {
@@ -16,6 +17,8 @@ export default class Caverna extends Phaser.Scene {
 		this.load.image('MainLev2.0', encodeURI(base + 'MainLev2.0.png'));
 		// carregar sprites do jogador 
 		this.load.spritesheet('player', 'assets/RPG_assets.png', { frameWidth: 16, frameHeight: 16 });
+		// carregar spritesheet dos cães
+		this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
 	}
 
 	create() {
@@ -64,11 +67,63 @@ export default class Caverna extends Phaser.Scene {
 			this.physics.add.collider(this.player, obst);
 		}
 
+		// adicionar 10 animais com spawns aleatórios
+		this.dogsGroup = this.physics.add.group();
+		const DOG_COUNT = 10;
+		const MAX_TRIES = 200;
+		const mapWW = map.width || map.widthInPixels / map.tileWidth;
+		const mapHH = map.height || map.heightInPixels / map.tileHeight;
+
+		const isBlockedTile = (tx, ty) => {
+			if (!obst) return false;
+			const tile = obst.getTileAt(tx, ty);
+			return !!(tile && tile.index !== -1);
+		};
+
+		const findPos = (tries = MAX_TRIES, minDist = 48) => {
+			for (let i = 0; i < tries; i++) {
+				const tx = Phaser.Math.Between(0, (mapWW || 1) - 1);
+				const ty = Phaser.Math.Between(0, (mapHH || 1) - 1);
+				if (isBlockedTile(tx, ty)) continue;
+				const wx = map.tileToWorldX(tx) + map.tileWidth / 2;
+				const wy = map.tileToWorldY(ty) + map.tileHeight;
+				if (Phaser.Math.Distance.Between(wx, wy, spawn.x, spawn.y) < minDist) continue;
+				// evitar spawn sobre outros cães
+				let collideOther = false;
+				this.dogsGroup.getChildren().forEach(d => {
+					if (Phaser.Math.Distance.Between(d.x, d.y, wx, wy) < minDist) collideOther = true;
+				});
+				if (collideOther) continue;
+				return { x: wx, y: wy };
+			}
+			return null;
+		};
+
+		for (let i = 0; i < DOG_COUNT; i++) {
+			const p = findPos();
+			if (!p) break;
+			const frame = Phaser.Math.Between(0, Math.max(0, Math.floor((this.textures.get('dogs').getSourceImage().width / 16)) - 1));
+			const dog = new Animal(this, p.x, p.y, frame);
+			this.dogsGroup.add(dog);
+			this.physics.add.overlap(this.player, dog, () => {
+				if (!dog._rescued) dog.rescue();
+			}, null, this);
+		}
+
+		// criar controlos 
+		this.cursors = this.input.keyboard.createCursorKeys();
+
 		//câmara centrada no mapa
 		const mapW = map.widthInPixels || this.scale.width;
 		const mapH = map.heightInPixels || this.scale.height;
 		this.physics.world.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.centerOn(Math.round(mapW / 2), Math.round(mapH / 2));
+	}
+
+	update() {
+		if (this.player && this.player.update) {
+			this.player.update(this.cursors);
+		}
 	}
 }
