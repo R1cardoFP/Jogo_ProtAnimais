@@ -21,8 +21,67 @@ export default class Caverna extends Phaser.Scene {
 		this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
 	}
 
-	create() {
+	create(data) {
 		const map = this.make.tilemap({ key: 'map_caverna' });
+
+		// inicializar contador de resgatados
+		this.rescuedCount = (data && typeof data.rescued !== 'undefined') ? data.rescued : 0;
+
+		// adicionar HUD igual ao implementado em Mapa
+		(function createHUDOverlay(scene) {
+			const body = document.body;
+			let el = document.getElementById('hud-overlay');
+			if (!el) {
+				el = document.createElement('div');
+				el.id = 'hud-overlay';
+				Object.assign(el.style, {
+					position: 'absolute',
+					padding: '6px 10px',
+					fontFamily: 'monospace',
+					fontSize: '18px',
+					color: '#ffffff',
+					background: 'rgba(0,0,0,0.35)',
+					zIndex: 9999,
+					pointerEvents: 'none',
+					whiteSpace: 'nowrap'
+				});
+				body.appendChild(el);
+			}
+			scene._hudOverlayEl = el;
+
+			// posiciona o overlay em relação ao canvas
+			const updateOverlayPosition = () => {
+				const canvas = body.querySelector('#game-container canvas') || body.querySelector('canvas');
+				if (!canvas) return;
+				const r = canvas.getBoundingClientRect();
+				el.style.left = (window.scrollX + r.left + 8) + 'px';
+				el.style.top = (window.scrollY + r.top + 8) + 'px';
+			};
+
+			
+			updateOverlayPosition();
+			scene._hudUpdatePos = updateOverlayPosition;
+			window.addEventListener('resize', updateOverlayPosition);
+			window.addEventListener('scroll', updateOverlayPosition);
+
+			// limpar ao fechar a scene
+			scene.events.on('shutdown', () => {
+				window.removeEventListener('resize', updateOverlayPosition);
+				window.removeEventListener('scroll', updateOverlayPosition);
+				if (scene._hudOverlayEl && scene._hudOverlayEl.parentNode) {
+					scene._hudOverlayEl.parentNode.removeChild(scene._hudOverlayEl);
+					scene._hudOverlayEl = null;
+				}
+			});
+		})(this);
+
+		// função para atualizar o texto superior 
+		this.updateTopText = () => {
+			const vidas = (this.player && typeof this.player.health !== 'undefined') ? this.player.health : 0;
+			const res = (typeof this.rescuedCount !== 'undefined') ? this.rescuedCount : 0;
+			if (this._hudOverlayEl) this._hudOverlayEl.textContent = `Vidas: ${vidas}   Resgatados: ${res}/${this.DOG_TARGET || 10}`;
+		};
+		
 
 		// adicionar todos os tilesets 
 		const tilesetObjs = map.tilesets.map(ts => {
@@ -106,7 +165,12 @@ export default class Caverna extends Phaser.Scene {
 			const dog = new Animal(this, p.x, p.y, frame);
 			this.dogsGroup.add(dog);
 			this.physics.add.overlap(this.player, dog, () => {
-				if (!dog._rescued) dog.rescue();
+				if (!dog._rescued) {
+					dog.rescue();
+					// atualizar contador e HUD 
+					this.rescuedCount = (this.rescuedCount || 0) + 1;
+					if (typeof this.updateTopText === 'function') this.updateTopText();
+				}
 			}, null, this);
 		}
 
@@ -119,6 +183,9 @@ export default class Caverna extends Phaser.Scene {
 		this.physics.world.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.centerOn(Math.round(mapW / 2), Math.round(mapH / 2));
+
+		// atualizar HUD
+		if (typeof this.updateTopText === 'function') this.updateTopText();
 	}
 
 	update() {
