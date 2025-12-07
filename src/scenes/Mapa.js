@@ -136,7 +136,7 @@ export default class Mapa extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, mapW, mapH);
         this.cameras.main.setBounds(0, 0, mapW, mapH);
 
-        // zoom fixo (muda o número para ajustar)
+        // zoom fixo 
         const FIXED_ZOOM = 3;
         this.cameras.main.setZoom(FIXED_ZOOM);
 
@@ -179,7 +179,7 @@ export default class Mapa extends Phaser.Scene {
         const minDistBetweenDogs = 96;
         const MAX_TRIES = 120;
 
-        // utilitário simples para encontrar posição válida
+        // função para encontrar posição válida 
         const findValidPos = (avoidList = [], minDist = minDistFromPlayer) => {
             for (let i = 0; i < MAX_TRIES; i++) {
                 const tx = Phaser.Math.Between(0, map.width - 1);
@@ -220,8 +220,10 @@ export default class Mapa extends Phaser.Scene {
             // adicionar overlap entre jogador e cão
             this.physics.add.overlap(this.player, dog, () => {
                 if (!dog._rescued) {
-                    dog.rescue();
+                
                     this.rescueDog(dog);
+                   
+                    dog.rescue();
                 }
             }, null, this);
         }
@@ -261,14 +263,36 @@ export default class Mapa extends Phaser.Scene {
 
     // função de resgate 
     rescueDog(dog) {
-        if (!dog || dog._rescued === false) {
-    
-        }
-        // atualiza contador/HUD
+      
+        if (!dog || dog._rescued === true) return;
+
+        // actualiza contador/HUD
         this.rescuedCount = (this.rescuedCount || 0) + 1;
-        // atualizar texto superior
         if (typeof this.updateTopText === 'function') this.updateTopText();
-        if (this.rescuedCount >= (this.DOG_TARGET || 6)) {
+
+        // se atingiu o objetivo, transição  para a Caverna
+        const target = this.DOG_TARGET || 6;
+        if (this.rescuedCount >= target) {
+            if (this._goingToCaverna) return; // proteger contra chamadas duplicadas
+            this._goingToCaverna = true;
+
+            // remover HUD overlay 
+            if (this._hudUpdatePos && typeof this._hudUpdatePos === 'function') {
+                window.removeEventListener('resize', this._hudUpdatePos);
+                window.removeEventListener('scroll', this._hudUpdatePos);
+                this._hudUpdatePos = null;
+            }
+            if (this._hudOverlayEl && this._hudOverlayEl.parentNode) {
+                this._hudOverlayEl.parentNode.removeChild(this._hudOverlayEl);
+                this._hudOverlayEl = null;
+            }
+
+            // desativar input/jogador/câmara 
+            if (this.input && typeof this.input.enabled !== 'undefined') this.input.enabled = false;
+            if (this.player && this.player.body) this.player.body.enable = false;
+            if (this.cameras && this.cameras.main) this.cameras.main.stopFollow();
+
+            // pequeno delay antes de mudar de cena
             this.time.delayedCall(350, () => this.scene.start('Caverna'));
         }
     }
@@ -282,7 +306,7 @@ export default class Mapa extends Phaser.Scene {
 		this.deathCount = (this.deathCount || 0) + 1;
 		
 
-		// se atingir 3 mortes: marcar gameOver e ir directamente para a cena GameOver
+		// se atingir 3 mortes: marcar gameOver e ir diretamente para a cena GameOver
 		if (this.deathCount >= 3) {
 			// impedir qualquer respawn futuro
 			this.isGameOver = true;

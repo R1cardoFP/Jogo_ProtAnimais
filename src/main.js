@@ -1,6 +1,7 @@
 import { Start } from './scenes/Start.js';
 import Mapa from './scenes/Mapa.js';
 import GameOver from './scenes/GameOver.js';
+import Caverna from './scenes/Caverna.js';
 import { Instrucoes } from './scenes/Instrucoes.js';
 const config = {
     type: Phaser.AUTO,
@@ -23,6 +24,7 @@ const config = {
         Start,
         Mapa,
         GameOver,
+        Caverna,
         Instrucoes 
     ],
     scale: { 
