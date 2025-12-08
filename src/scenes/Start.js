@@ -63,7 +63,7 @@ export class Start extends Phaser.Scene {
             // adicionar ao container
             container.add([bg, text]);
 
-        
+
             bg.on('pointerup', () => {
                
                 if (label === 'Jogar') {

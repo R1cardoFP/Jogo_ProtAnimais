@@ -19,7 +19,7 @@ export default class Armadilha extends Phaser.Physics.Arcade.Sprite {
         this.setDepth(40);
 
         // START INVISIBLE: manter corpo activo para overlaps mas não desenhar
-        this.setVisible(false);
+        this.setVisible(true);
     }
 
     // ativar armadilha: mostra, toca anim e no fim tira vida ao jogador
