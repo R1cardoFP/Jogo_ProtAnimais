@@ -31,7 +31,7 @@ export default class Caverna extends Phaser.Scene {
 	create(data) {
 		const map = this.make.tilemap({ key: 'map_caverna' });
 
-		// inicializar contador de resgatados 
+		// inicializar contador de resgatados verificando se existem dados passados se nao houver começa em 0
 		this.rescuedCount = (data && typeof data.rescued !== 'undefined') ? data.rescued : 0;
 		//guardar quantos ja tinha
 		this.initialRescued = this.rescuedCount;
@@ -88,7 +88,7 @@ export default class Caverna extends Phaser.Scene {
 			});
 		})(this);
 
-		// função para atualizar o texto superior
+		// função para atualizar o texto superior com vidas e resgatados
 		this.updateTopText = () => {
 			const vidas = (this.player && typeof this.player.health !== 'undefined') ? this.player.health : 0;
 			const res = (typeof this.rescuedInCave !== 'undefined') ? this.rescuedInCave : 0;
@@ -147,7 +147,7 @@ export default class Caverna extends Phaser.Scene {
 		const MAX_TRIES = 200;
 		const mapWW = map.width || map.widthInPixels / map.tileWidth;
 		const mapHH = map.height || map.heightInPixels / map.tileHeight;
-
+		
 		const isBlockedTile = (tx, ty) => {
 			if (!obst) return false;
 			const tile = obst.getTileAt(tx, ty);

@@ -11,15 +11,14 @@ export default class Armadilha extends Phaser.Physics.Arcade.Sprite {
             this.body.setSize(12, 8);
             this.body.setOffset(2, 8);
         }
-
+        // se imovível e sem gravidadea
         if (this.body && this.body.setImmovable) this.body.setImmovable(true);
         if (this.body) this.body.allowGravity = false;
 
         this.activated = false;
         this.setDepth(40);
 
-        // START INVISIBLE: manter corpo activo para overlaps mas não desenhar
-        this.setVisible(true);
+        // START INVISIBLE: manter corpo activo para a
     }
 
     // ativar armadilha: mostra, toca anim e no fim tira vida ao jogador
@@ -41,6 +40,7 @@ export default class Armadilha extends Phaser.Physics.Arcade.Sprite {
             // aguardar fim da animação e depois aplicar dano e destruir
             this.once('animationcomplete', (anim) => {
                 if (anim && anim.key === 'trap_anim') {
+                    //se existe jogador na scene, aplicar dano
                     if (this.scene && this.scene.player && typeof this.scene.player.takeDamage === 'function') {
                         this.scene.player.takeDamage(1);
                     }
