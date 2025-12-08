@@ -3,7 +3,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         super(scene, x, y, key, frame);
         scene.add.existing(this);
         scene.physics.add.existing(this);
-
+        // configurações colisão e profundidade
         this.setCollideWorldBounds(true);
         if (this.body && this.body.setSize) {
             this.body.setSize(10, 12);
@@ -16,6 +16,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.invulnerable = false;
     }
 
+    // método de atualização para controlar movimento e animações
     update(cursors) {
         if (!this.body) return;
         this.body.setVelocity(0);
@@ -43,8 +44,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.setFrame(0);
         }
     }
-
-
+     // método para receber dano e player perder vida e ficar com tint vermelho temporariamente 
     takeDamage(amount = 1) {
         if (this.invulnerable) return;
         this.health = Math.max(0, this.health - amount);

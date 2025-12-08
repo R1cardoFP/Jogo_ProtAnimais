@@ -240,7 +240,7 @@ export default class Mapa extends Phaser.Scene {
         const trapsLayer = map.getObjectLayer ? map.getObjectLayer('Traps') : null;
         const TRAP_TARGET = 12;
 
-        
+        // se houver layer de objectos "Traps", usar essas posições sem sobrepor
         if (trapsLayer && trapsLayer.objects && trapsLayer.objects.length) {
           
             for (const obj of trapsLayer.objects) {

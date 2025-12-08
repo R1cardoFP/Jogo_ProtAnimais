@@ -101,11 +101,11 @@ export default class Caverna extends Phaser.Scene {
 			return map.addTilesetImage(ts.name, ts.name, ts.tilewidth, ts.tileheight, ts.margin || 0, ts.spacing || 0);
 		});
 
-		// criar layers 
+		// criar layers condicao  -  se existir create layer se nao existir deixa null
 		const floor = map.getLayer('Chao') ? map.createLayer('Chao', tilesetObjs, 0, 0) : null;
 		const decor = map.getLayer('Decoracao') ? map.createLayer('Decoracao', tilesetObjs, 0, 0) : null;
 		const obst = map.getLayer('Obstaculos') ? map.createLayer('Obstaculos', tilesetObjs, 0, 0) : null;
-
+		
 		if (obst) {
 		this.rescuedCount = (data && typeof data.rescued !== 'undefined') ? data.rescued : 0;
 		// guardar quantos caes ja tinha
@@ -154,6 +154,7 @@ export default class Caverna extends Phaser.Scene {
 			return !!(tile && tile.index !== -1);
 		};
 
+		// função para encontrar posição válida de spawn dos cães (evitar obstáculos e perto do jogador)
 		const findPos = (tries = MAX_TRIES, minDist = 48) => {
 			for (let i = 0; i < tries; i++) {
 				const tx = Phaser.Math.Between(0, (mapWW || 1) - 1);
@@ -172,6 +173,7 @@ export default class Caverna extends Phaser.Scene {
 			}
 			return null;
 		};
+		 
 
 		for (let i = 0; i < DOG_COUNT; i++) {
 			const p = findPos();
@@ -211,7 +213,7 @@ export default class Caverna extends Phaser.Scene {
 				repeat: 0
 			});
 		}
-		
+		// gerar armadilhas a partir do object layer 'Traps' 
 		this.trapsGroup = this.physics.add.group();
 		const TRAP_COUNT = 20;
 		const trapsLayer = map.getObjectLayer ? map.getObjectLayer('Traps') : null;
