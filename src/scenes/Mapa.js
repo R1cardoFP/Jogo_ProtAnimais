@@ -305,8 +305,10 @@ export default class Mapa extends Phaser.Scene {
             if (this.player && this.player.body) this.player.body.enable = false;
             if (this.cameras && this.cameras.main) this.cameras.main.stopFollow();
 
-            // pequeno delay antes de mudar de cena
-            this.time.delayedCall(350, () => this.scene.start('Caverna'));
+            // pequeno delay antes de mudar de cena e passar quantos cães já foram resgatados
+            this.time.delayedCall(350, () => this.scene.start('Caverna', {
+                 rescued: this.rescuedCount
+             }));
         }
     }
 

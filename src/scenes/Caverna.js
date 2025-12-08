@@ -31,8 +31,14 @@ export default class Caverna extends Phaser.Scene {
 	create(data) {
 		const map = this.make.tilemap({ key: 'map_caverna' });
 
-		// inicializar contador de resgatados
+		// inicializar contador de resgatados 
 		this.rescuedCount = (data && typeof data.rescued !== 'undefined') ? data.rescued : 0;
+		//guardar quantos ja tinha
+		this.initialRescued = this.rescuedCount;
+		// contador  dos resgates na caverna
+		this.rescuedInCave = 0;
+		// meta de cães na caverna 
+		this.CAVE_DOG_TARGET = 10;
 
 		// adicionar HUD igual ao implementado em Mapa
 		(function createHUDOverlay(scene) {
@@ -82,11 +88,11 @@ export default class Caverna extends Phaser.Scene {
 			});
 		})(this);
 
-		// função para atualizar o texto superior 
+		// função para atualizar o texto superior
 		this.updateTopText = () => {
 			const vidas = (this.player && typeof this.player.health !== 'undefined') ? this.player.health : 0;
-			const res = (typeof this.rescuedCount !== 'undefined') ? this.rescuedCount : 0;
-			if (this._hudOverlayEl) this._hudOverlayEl.textContent = `Vidas: ${vidas}   Resgatados: ${res}/${this.DOG_TARGET || 10}`;
+			const res = (typeof this.rescuedInCave !== 'undefined') ? this.rescuedInCave : 0;
+			if (this._hudOverlayEl) this._hudOverlayEl.textContent = `Vidas: ${vidas}   Resgatados: ${res}/${this.CAVE_DOG_TARGET}`;
 		};
 		
 
@@ -101,7 +107,9 @@ export default class Caverna extends Phaser.Scene {
 		const obst = map.getLayer('Obstaculos') ? map.createLayer('Obstaculos', tilesetObjs, 0, 0) : null;
 
 		if (obst) {
-			obst.setCollisionByProperty({ collides: true });
+		this.rescuedCount = (data && typeof data.rescued !== 'undefined') ? data.rescued : 0;
+		// guardar quantos caes ja tinha
+		this.initialRescued = this.rescuedCount;
 			obst.setCollisionByExclusion([-1]);
 		}
 
@@ -176,9 +184,20 @@ export default class Caverna extends Phaser.Scene {
 					// tocar som de latido 
 					if (this.sound) this.sound.play('dog_bark');
 					dog.rescue();
-					// atualizar contador e HUD 
+					// atualizar contadores
+					this.rescuedInCave = (this.rescuedInCave || 0) + 1;
 					this.rescuedCount = (this.rescuedCount || 0) + 1;
 					if (typeof this.updateTopText === 'function') this.updateTopText();
+
+					// se resgatou todos os cães da caverna, ir para o fim de jogo e enviar dados de quantos resgates teve
+					if (!this._goingToFim && this.rescuedInCave >= this.CAVE_DOG_TARGET) {
+						this._goingToFim = true;
+						this.scene.start('FimJogo', {
+							rescuedFromMap: this.initialRescued,
+							rescuedInCave: this.rescuedInCave,
+							totalRescued: this.rescuedCount
+						});
+					}
 				}
 			}, null, this);
 		}
@@ -246,6 +265,8 @@ export default class Caverna extends Phaser.Scene {
 		this.physics.world.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.setBounds(0, 0, mapW, mapH);
 		this.cameras.main.centerOn(Math.round(mapW / 2), Math.round(mapH / 2));
+
+                    
 
 		// atualizar HUD
 		if (typeof this.updateTopText === 'function') this.updateTopText();
