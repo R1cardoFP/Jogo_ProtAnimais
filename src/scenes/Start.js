@@ -5,6 +5,8 @@ export class Start extends Phaser.Scene {
     }
 
     create() {
+    
+
         // obter largura e altura do ecrã/área de jogo
         const w = this.scale.width;
         const h = this.scale.height;
@@ -103,7 +105,19 @@ export class Start extends Phaser.Scene {
             color: '#bfeaf8'
         }).setOrigin(0.5);
 
-        
+        // musica de fundo 
+        const audioPath = 'assets/sound/musicaFundo.mp3';
+
+        // criar novo Audio e guardar em this.game
+        this.game.bgAudio = this.game.bgAudio || new Audio(audioPath);
+        this.backgroundMusic = this.game.bgAudio;
+        this.backgroundMusic.loop = true;
+        this.backgroundMusic.volume = 0.5;
+        // tocar música
+        if (this.backgroundMusic.paused) {
+            this.backgroundMusic.play();  
+        }
+       
     }
 
     

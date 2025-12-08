@@ -13,8 +13,8 @@ export class Instrucoes extends Phaser.Scene {
         // fundo simples que preenche todo o ecrã
         this.add.rectangle(0, 0, w, h, 0x0b2a3a).setOrigin(0);
 
-        // título da cena de instruções (tamanho reduzido)
-        const titleSize = Math.round(h * 0.06); // menor que antes
+        // título da cena de instruções 
+        const titleSize = Math.round(h * 0.06); 
         this.add.text(w / 2, h * 0.10, 'Instruções', {
             fontFamily: 'Arial',
             fontSize: `${titleSize}px`,
@@ -22,13 +22,13 @@ export class Instrucoes extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        // linhas de texto com as instruções (estático, PT-PT) — tamanhos reduzidos
+        // linhas de texto com as instruções
         const lines = [
             'Objetivo:',
             '  - Procurar e resgatar o maior número possível de animais.',
             '',
             'Controlo:',
-            '  - Teclas WASD ou setas para mover o jogador.',
+            '  - Teclas de setas para mover o jogador.',
             '',
             'Regras principais:',
             '  - Colidir com um animal: animal resgatado e pontuação aumenta.',

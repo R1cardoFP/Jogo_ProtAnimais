@@ -18,6 +18,13 @@ export default class Mapa extends Phaser.Scene {
         this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
        
         this.load.spritesheet('trap', 'assets/Bear_Trap.png', { frameWidth: 16, frameHeight: 16 });
+
+        // adicionar carregamento do som da armadilha
+        this.load.audio('trap_snap', 'assets/sound/BearTrap.mp3');
+
+        // novo: carregar som do latido do cão 
+        this.load.audio('dog_bark', 'assets/sound/DogBark.mp3');
+        
     }
 
     create() {
@@ -220,9 +227,9 @@ export default class Mapa extends Phaser.Scene {
             // adicionar overlap entre jogador e cão
             this.physics.add.overlap(this.player, dog, () => {
                 if (!dog._rescued) {
-                
+                    // tocar som 
+                    if (this.sound) this.sound.play('dog_bark');
                     this.rescueDog(dog);
-                   
                     dog.rescue();
                 }
             }, null, this);
@@ -243,6 +250,8 @@ export default class Mapa extends Phaser.Scene {
                 this.trapsGroup.add(trap);
                 this.physics.add.overlap(this.player, trap, () => {
                     if (!trap.activated) {
+                        // tocar som 
+                        if (this.sound) this.sound.play('trap_snap');
                         trap.trigger();
                     }
                 }, null, this);
@@ -255,7 +264,11 @@ export default class Mapa extends Phaser.Scene {
                 const trap = new Armadilha(this, pos.x, pos.y, 0, 'trap');
                 this.trapsGroup.add(trap);
                 this.physics.add.overlap(this.player, trap, () => {
-                    if (!trap.activated) trap.trigger();
+                    if (!trap.activated) {
+                        // tocar som 
+                        if (this.sound) this.sound.play('trap_snap');
+                        trap.trigger();
+                    }
                 }, null, this);
             }
         }

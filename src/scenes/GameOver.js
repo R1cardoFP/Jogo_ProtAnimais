@@ -7,10 +7,10 @@ export default class GameOver extends Phaser.Scene {
 		const w = this.scale.width;
 		const h = this.scale.height;
 
-		// fundo igual ao Start
+		// fundo igual ao Start 
 		this.add.rectangle(0, 0, w, h, 0x0b2a3a).setOrigin(0);
 
-		// títul
+		// títulO
 		const titleSize = Math.round(h * 0.09);
 		this.add.text(w / 2, h * 0.12, 'GAME OVER', {
 			fontFamily: 'Arial',

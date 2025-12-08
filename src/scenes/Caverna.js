@@ -22,6 +22,10 @@ export default class Caverna extends Phaser.Scene {
 		this.load.spritesheet('dogs', 'assets/dogs.png', { frameWidth: 16, frameHeight: 16 });
 		// carregar spritesheet da armadilha
 		this.load.spritesheet('trap', 'assets/Bear_Trap.png', { frameWidth: 16, frameHeight: 16 });
+
+		// carregar sons de efeitos
+		this.load.audio('trap_snap', 'assets/sound/BearTrap.mp3');
+		this.load.audio('dog_bark', 'assets/sound/DogBark.mp3');
 	}
 
 	create(data) {
@@ -169,6 +173,8 @@ export default class Caverna extends Phaser.Scene {
 			this.dogsGroup.add(dog);
 			this.physics.add.overlap(this.player, dog, () => {
 				if (!dog._rescued) {
+					// tocar som de latido 
+					if (this.sound) this.sound.play('dog_bark');
 					dog.rescue();
 					// atualizar contador e HUD 
 					this.rescuedCount = (this.rescuedCount || 0) + 1;
@@ -197,7 +203,12 @@ export default class Caverna extends Phaser.Scene {
 				const ty = (obj.y || 0) + ((obj.height) ? obj.height : map.tileHeight);
 				const trap = new Armadilha(this, tx, ty, 0, 'trap');
 				this.trapsGroup.add(trap);
-				this.physics.add.overlap(this.player, trap, () => { if (!trap.activated) trap.trigger(); }, null, this);
+				this.physics.add.overlap(this.player, trap, () => {
+					if (!trap.activated) {
+						if (this.sound) this.sound.play('trap_snap');
+						trap.trigger();
+					}
+				}, null, this);
 			}
 		} else {
 			// gerar posições aleatórias
@@ -217,7 +228,12 @@ export default class Caverna extends Phaser.Scene {
 				if (!p) continue;
 				const trap = new Armadilha(this, p.x, p.y, 0, 'trap');
 				this.trapsGroup.add(trap);
-				this.physics.add.overlap(this.player, trap, () => { if (!trap.activated) trap.trigger(); }, null, this);
+				this.physics.add.overlap(this.player, trap, () => {
+					if (!trap.activated) {
+						if (this.sound) this.sound.play('trap_snap');
+						trap.trigger();
+					}
+				}, null, this);
 			}
 		}
 
